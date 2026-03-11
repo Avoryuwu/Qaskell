@@ -1,5 +1,9 @@
 module Lib
-    ( 
+    (
+    Qc,
+    Qstate,
+    displayState,
+    displayProb,
     qc,
     qstate,
     state,
@@ -17,6 +21,8 @@ module Lib
     cz,
     ch,
     cg,
+    groverOp,
+    getOracle,
     ) where
 
 import Data.Complex
@@ -31,12 +37,52 @@ qc n = (Qc (take (n) (repeat ((1:+0::Complex Float, 0:+0::Complex Float)))), n)
 qstate :: Int -> (Qstate, Int)
 qstate n = state (qc n)
 
-calc :: (Qstate, Int) -> [(Qstate, Int) -> (Qstate, Int)]  -> (Qstate, Int)
-calc q gs = doGates q (reverse gs)
+displayState :: (Qstate, Int) -> IO ()
+displayState ((Qstate q), n) = do
+  putStrLn (getString q n)
+
+displayProb :: (Qstate, Int) -> IO ()
+displayProb (q, n) = do
+  putStrLn (getString (prob (q, n)) n)
+
+getString :: (Show a) => [a] -> Int -> String
+getString [x] n = (toBin 0 n) ++ ": " ++ (show x)
+getString (x:xs) n = (toBin (length xs) n) ++ ": " ++ (show x) ++ "\n" ++ (getString xs n)
+
+toBin :: Int -> Int -> String
+toBin x 1 = if (mod x 2) == 1 then "0" else "1"
+toBin x n = (if (mod x 2) == 1 then "0" else "1") ++ (toBin (div x 2) (n-1))
+
+
+calc :: [(Qstate, Int) -> (Qstate, Int)] -> (Qstate, Int) -> (Qstate, Int)
+calc gs q = doGates q (reverse gs)
 
 doGates :: (Qstate, Int) -> [(Qstate, Int) -> (Qstate, Int)] -> (Qstate, Int)
 doGates q [g] = g q
 doGates q (g:gs) = g (doGates q gs)
+
+getOracle :: String -> [(Qstate, Int) -> (Qstate, Int)]
+getOracle s = do 
+  let mark = x (calcMark s)
+  let num = (length s) - 1
+  ([mark] ++ [cz [0..(num-1)] [num]]) ++ [mark]
+
+calcMark :: String -> [Int]
+calcMark ['0'] = [0]
+calcMark ['1'] = []
+calcMark ('0':s) = (length s) : (calcMark s)
+calcMark ('1':s) = calcMark s
+
+groverOp :: Int -> [(Qstate, Int) -> (Qstate, Int)] -> (Qstate, Int) -> (Qstate, Int)
+groverOp amt o (q, n) = do
+  let num = n-1
+  let gate = [h [0..num], x [0..num], cz [0..(num-1)] [num], x [0..num], h [0..num]]
+  let program = [h [0..num]] ++ repeatList amt (o++gate)
+  calc program (q, n)
+
+repeatList :: Int -> [a] -> [a]
+repeatList 1 l = l
+repeatList n l = l ++ repeatList (n-1) l
 
 x :: [Int] -> (Qstate, Int) -> (Qstate, Int)
 x n q = appGate n (tensorPow (length n) [[0, 1], [1, 0]]) q
