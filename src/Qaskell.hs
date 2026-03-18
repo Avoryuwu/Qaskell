@@ -7,6 +7,7 @@ module Qaskell
     qc,
     qstate,
     state,
+    toArr,
     run,
     meas,
     prob,
@@ -38,6 +39,9 @@ qc n = (Qc (take (n) (repeat ((1:+0::Complex Float, 0:+0::Complex Float)))), n)
 
 qstate :: Int -> (Qstate, Int)
 qstate n = state (qc n)
+
+toArr :: (Qstate, Int) -> [Complex Float]
+toArr ((Qstate q), _) = q
 
 meas :: (Qstate, Int) -> String
 meas (q, n) = map (\x -> if x == '0' then '1' else '0') (reverse (toBin (calcProb (prob (q, n)) (random (mkStdGen 1) :: (Float, StdGen))) n))
