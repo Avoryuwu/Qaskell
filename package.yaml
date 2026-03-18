@@ -1,4 +1,4 @@
-name: qc
+name: Qaskell
 version: 0.1.0.0
 github: "githubuser/qc"
 license: BSD-3-Clause
@@ -46,7 +46,7 @@ executables:
       - -rtsopts
       - -with-rtsopts=-N
     dependencies:
-      - qc
+      - Qaskell
 
 tests:
   qc-test:
@@ -57,4 +57,4 @@ tests:
       - -rtsopts
       - -with-rtsopts=-N
     dependencies:
-      - qc
+      - Qaskell
