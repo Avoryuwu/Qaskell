@@ -38,7 +38,7 @@ library:
   source-dirs: src
 
 executables:
-  qc-exe:
+  Qaskell-exe:
     main: Main.hs
     source-dirs: app
     ghc-options:
@@ -49,7 +49,7 @@ executables:
       - Qaskell
 
 tests:
-  qc-test:
+  Qaskell-test:
     main: Spec.hs
     source-dirs: test
     ghc-options:
