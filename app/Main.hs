@@ -1,6 +1,6 @@
 module Main (main) where
 
-import Lib
+import Qaskell
 
 main :: IO ()
 main = do

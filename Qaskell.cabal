@@ -7,8 +7,8 @@ cabal-version: 2.2
 name:           Qaskell
 version:        0.1.0.0
 description:    Please see the README on GitHub at <https://github.com/githubuser/qc#readme>
-homepage:       https://github.com/githubuser/qc#readme
-bug-reports:    https://github.com/githubuser/qc/issues
+homepage:       https://github.com/Avoryuwu/Qaskell#readme
+bug-reports:    https://github.com/Avoryuwu/Qaskell/issues
 author:         Author name here
 maintainer:     example@example.com
 copyright:      2026 Author name here
@@ -21,11 +21,11 @@ extra-source-files:
 
 source-repository head
   type: git
-  location: https://github.com/githubuser/qc
+  location: https://github.com/Avoryuwu/Qaskell
 
 library
   exposed-modules:
-      Lib
+      Qaskell
   other-modules:
       Paths_Qaskell
   autogen-modules:
