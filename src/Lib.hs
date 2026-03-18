@@ -7,7 +7,8 @@ module Lib
     qc,
     qstate,
     state,
-    calc,
+    run,
+    meas,
     prob,
     getBit,
     getProb,
@@ -26,6 +27,7 @@ module Lib
     ) where
 
 import Data.Complex
+import System.Random
 
 
 data Qc = Qc [(Complex Float, Complex Float)] deriving Show
@@ -37,6 +39,15 @@ qc n = (Qc (take (n) (repeat ((1:+0::Complex Float, 0:+0::Complex Float)))), n)
 qstate :: Int -> (Qstate, Int)
 qstate n = state (qc n)
 
+meas :: (Qstate, Int) -> String
+meas (q, n) = map (\x -> if x == '0' then '1' else '0') (reverse (toBin (calcProb (prob (q, n)) (random (mkStdGen 1) :: (Float, StdGen))) n))
+
+calcProb :: [Float] -> (Float, StdGen) -> Int
+calcProb r (n, _) = getOutput r n
+
+getOutput :: [Float] -> Float -> Int
+getOutput (r:rs) n =  if n > r then (getOutput rs (n-r)) + 1 else 0
+
 displayState :: (Qstate, Int) -> IO ()
 displayState ((Qstate q), n) = do
   putStrLn (getString q n)
@@ -46,16 +57,16 @@ displayProb (q, n) = do
   putStrLn (getString (prob (q, n)) n)
 
 getString :: (Show a) => [a] -> Int -> String
-getString [x] n = (toBin 0 n) ++ ": " ++ (show x)
-getString (x:xs) n = (toBin (length xs) n) ++ ": " ++ (show x) ++ "\n" ++ (getString xs n)
+getString [x] n = (reverse (toBin 0 n)) ++ ": " ++ (show x)
+getString (x:xs) n = (reverse (toBin (length xs) n)) ++ ": " ++ (show x) ++ "\n" ++ (getString xs n)
 
 toBin :: Int -> Int -> String
 toBin x 1 = if (mod x 2) == 1 then "0" else "1"
 toBin x n = (if (mod x 2) == 1 then "0" else "1") ++ (toBin (div x 2) (n-1))
 
 
-calc :: [(Qstate, Int) -> (Qstate, Int)] -> (Qstate, Int) -> (Qstate, Int)
-calc gs q = doGates q (reverse gs)
+run :: [(Qstate, Int) -> (Qstate, Int)] -> (Qstate, Int) -> (Qstate, Int)
+run gs q = doGates q (reverse gs)
 
 doGates :: (Qstate, Int) -> [(Qstate, Int) -> (Qstate, Int)] -> (Qstate, Int)
 doGates q [g] = g q
@@ -78,7 +89,7 @@ groverOp amt o (q, n) = do
   let num = n-1
   let gate = [h [0..num], x [0..num], cz [0..(num-1)] [num], x [0..num], h [0..num]]
   let program = [h [0..num]] ++ repeatList amt (o++gate)
-  calc program (q, n)
+  run program (q, n)
 
 repeatList :: Int -> [a] -> [a]
 repeatList 1 l = l

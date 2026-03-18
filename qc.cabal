@@ -35,6 +35,7 @@ library
   ghc-options: -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       base >=4.7 && <5
+    , random
   default-language: Haskell2010
 
 executable qc-exe
@@ -49,6 +50,7 @@ executable qc-exe
   build-depends:
       base >=4.7 && <5
     , qc
+    , random
   default-language: Haskell2010
 
 test-suite qc-test
@@ -64,4 +66,5 @@ test-suite qc-test
   build-depends:
       base >=4.7 && <5
     , qc
+    , random
   default-language: Haskell2010
