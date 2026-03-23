@@ -25,6 +25,7 @@ module Qaskell
     cg,
     groverOp,
     getOracle,
+    toBin,
     ) where
 
 import Data.Complex
