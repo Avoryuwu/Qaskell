@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       Qaskell
+      Qaskell.Display
   other-modules:
       Paths_Qaskell
   autogen-modules:
@@ -35,6 +36,8 @@ library
   ghc-options: -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       base >=4.7 && <5
+    , colour
+    , gloss
     , random
   default-language: Haskell2010
 
@@ -50,6 +53,8 @@ executable Qaskell-exe
   build-depends:
       Qaskell
     , base >=4.7 && <5
+    , colour
+    , gloss
     , random
   default-language: Haskell2010
 
@@ -66,5 +71,7 @@ test-suite Qaskell-test
   build-depends:
       Qaskell
     , base >=4.7 && <5
+    , colour
+    , gloss
     , random
   default-language: Haskell2010
