@@ -13,6 +13,7 @@ module Qaskell
     prob,
     getBit,
     getProb,
+    getProgram,
     x,
     y,
     z,
@@ -30,6 +31,7 @@ module Qaskell
 
 import Data.Complex
 import System.Random
+import Debug.Trace
 
 
 data Qc = Qc [(Complex Float, Complex Float)] deriving Show
@@ -38,14 +40,14 @@ data Qstate = Qstate [Complex Float] deriving Show
 qc :: Int -> (Qc, Int)
 qc n = (Qc (take (n) (repeat ((1:+0::Complex Float, 0:+0::Complex Float)))), n)
 
-qstate :: Int -> (Qstate, Int)
+qstate :: Int -> (Qstate, Int, String)
 qstate n = state (qc n)
 
-toArr :: (Qstate, Int) -> [Complex Float]
-toArr ((Qstate q), _) = q
+toArr :: (Qstate, Int, String) -> [Complex Float]
+toArr ((Qstate q), _, _) = q
 
-meas :: (Qstate, Int) -> String
-meas (q, n) = map (\x -> if x == '0' then '1' else '0') (reverse (toBin (calcProb (prob (q, n)) (random (mkStdGen 1) :: (Float, StdGen))) n))
+meas :: (Qstate, Int, String) -> String
+meas (q, n, _) = map (\x -> if x == '0' then '1' else '0') (reverse (toBin (calcProb (prob (q, n)) (random (mkStdGen 1) :: (Float, StdGen))) n))
 
 calcProb :: [Float] -> (Float, StdGen) -> Int
 calcProb r (n, _) = getOutput r n
@@ -53,12 +55,15 @@ calcProb r (n, _) = getOutput r n
 getOutput :: [Float] -> Float -> Int
 getOutput (r:rs) n =  if n > r then (getOutput rs (n-r)) + 1 else 0
 
-displayState :: (Qstate, Int) -> IO ()
-displayState ((Qstate q), n) = do
+getProgram :: (Qstate, Int, String) -> String
+getProgram (_, _, s) = take ((length s) - 2) (s)
+
+displayState :: (Qstate, Int, String) -> IO ()
+displayState ((Qstate q), n, _) = do
   putStrLn (getString q n)
 
-displayProb :: (Qstate, Int) -> IO ()
-displayProb (q, n) = do
+displayProb :: (Qstate, Int, String) -> IO ()
+displayProb (q, n, _) = do
   putStrLn (getString (prob (q, n)) n)
 
 getString :: (Show a) => [a] -> Int -> String
@@ -69,19 +74,19 @@ toBin :: Int -> Int -> String
 toBin x 1 = if (mod x 2) == 1 then "0" else "1"
 toBin x n = (if (mod x 2) == 1 then "0" else "1") ++ (toBin (div x 2) (n-1))
 
-
-run :: [(Qstate, Int) -> (Qstate, Int)] -> (Qstate, Int) -> (Qstate, Int)
+run :: [(Qstate, Int, String) -> (Qstate, Int, String)] -> (Qstate, Int, String) -> (Qstate, Int, String)
 run gs q = doGates q (reverse gs)
 
-doGates :: (Qstate, Int) -> [(Qstate, Int) -> (Qstate, Int)] -> (Qstate, Int)
+doGates :: (Qstate, Int, String) -> [(Qstate, Int, String) -> (Qstate, Int, String)] -> (Qstate, Int, String)
+doGates q [] = q
 doGates q [g] = g q
 doGates q (g:gs) = g (doGates q gs)
 
-getOracle :: String -> [(Qstate, Int) -> (Qstate, Int)]
-getOracle s = do 
+getOracle :: String -> [(Qstate, Int, String) -> (Qstate, Int, String)]
+getOracle s = do
   let mark = x (calcMark s)
   let num = (length s) - 1
-  ([mark] ++ [cz [0..(num-1)] [num]]) ++ [mark]
+  [mark] ++ [cz [0..(num-1)] [num]] ++ [mark]
 
 calcMark :: String -> [Int]
 calcMark ['0'] = [0]
@@ -89,59 +94,70 @@ calcMark ['1'] = []
 calcMark ('0':s) = (length s) : (calcMark s)
 calcMark ('1':s) = calcMark s
 
-groverOp :: Int -> [(Qstate, Int) -> (Qstate, Int)] -> (Qstate, Int) -> (Qstate, Int)
-groverOp amt o (q, n) = do
+groverOp :: Int -> [(Qstate, Int, String) -> (Qstate, Int, String)] -> (Qstate, Int, String) -> (Qstate, Int, String)
+groverOp amt o (q, n, s) = do
   let num = n-1
   let gate = [h [0..num], x [0..num], cz [0..(num-1)] [num], x [0..num], h [0..num]]
   let program = [h [0..num]] ++ repeatList amt (o++gate)
-  run program (q, n)
+  run program (q, n, s)
 
 repeatList :: Int -> [a] -> [a]
 repeatList 1 l = l
 repeatList n l = l ++ repeatList (n-1) l
 
-x :: [Int] -> (Qstate, Int) -> (Qstate, Int)
-x n q = appGate n (tensorPow (length n) [[0, 1], [1, 0]]) q
+x :: [Int] -> (Qstate, Int, String) -> (Qstate, Int, String)
+x n (q, a, s) = appGate n (tensorPow (length n) [[0, 1], [1, 0]]) (s ++ "x " ++ (show n) ++ ", ") (q, a, s)
 
-y :: [Int] -> (Qstate, Int) -> (Qstate, Int)
-y n q = appGate n (tensorPow (length n) [[0, 0 :+ 1], [0 :+ (-1), 0]]) q
+y :: [Int] -> (Qstate, Int, String) -> (Qstate, Int, String)
+y n (q, a, s) = appGate n (tensorPow (length n) [[0, 0 :+ 1], [0 :+ (-1), 0]]) (s ++ "y " ++ (show n) ++ ", ") (q, a, s)
 
-z :: [Int] -> (Qstate, Int) -> (Qstate, Int)
-z n q = appGate n (tensorPow (length n) [[1, 0], [0, (-1)]]) q
+z :: [Int] -> (Qstate, Int, String) -> (Qstate, Int, String)
+z n (q, a, s) = appGate n (tensorPow (length n) [[1, 0], [0, (-1)]]) (s ++ "z " ++ (show n) ++ ", ") (q, a, s)
 
-h :: [Int] -> (Qstate, Int) -> (Qstate, Int)
-h n q = do
+h :: [Int] -> (Qstate, Int, String) -> (Qstate, Int, String)
+h n (q, a, s) = do
   let mag = (1/(2**0.5))
   let m = [map (*mag) [1, 1], map (*mag) [1, (-1)]]
-  appGate n (tensorPow (length n) m) q
+  appGate n (tensorPow (length n) m) (s ++ "h " ++ (show n) ++ ", ") (q, a, s)
 
-g :: [[Complex Float]] -> [Int] -> (Qstate, Int) -> (Qstate, Int)
-g m n q = appGate n (tensorPow (length n) m) q
+g :: [[Complex Float]] -> [Int] -> (Qstate, Int, String) -> (Qstate, Int, String)
+g m n (q, a, s) = appGate n (tensorPow (length n) m) (s ++ "g " ++ (show m) ++ " " ++ (show n) ++ ", ") (q, a, s)
 
-cx :: [Int] -> [Int] -> (Qstate, Int) -> (Qstate, Int)
-cx = mcmt [[0, 1], [1, 0]]
+cx :: [Int] -> [Int] -> (Qstate, Int, String) -> (Qstate, Int, String)
+cx c t (q, a, s) = do
+  let (qt, at) = mcmt [[0, 1], [1, 0]] c t (q, a)
+  (qt, at, (s ++ "cx " ++ (show c) ++ " " ++ (show t) ++ ", "))
 
-cy :: [Int] -> [Int] -> (Qstate, Int) -> (Qstate, Int)
-cy = mcmt [[0, 0 :+ 1], [0 :+ (-1), 0]]
+cy :: [Int] -> [Int] -> (Qstate, Int, String) -> (Qstate, Int, String)
+cy c t (q, a, s) = do
+  let (qt, at) = mcmt [[0, 0 :+ 1], [0 :+ (-1), 0]] c t (q, a)
+  (qt, at, (s ++ "cy " ++ (show c) ++ " " ++ (show t) ++ ", "))
 
-cz :: [Int] -> [Int] -> (Qstate, Int) -> (Qstate, Int)
-cz = mcmt [[1, 0], [0, (-1)]]
+cz :: [Int] -> [Int] -> (Qstate, Int, String) -> (Qstate, Int, String)
+cz c t (q, a, s) = do
+  let (qt, at) = mcmt [[1, 0], [0, (-1)]] c t (q, a)
+  (qt, at, (s ++ "cz " ++ (show c) ++ " " ++ (show t) ++ ", "))
 
-ch :: [Int] -> [Int] -> (Qstate, Int) -> (Qstate, Int)
-ch = do
+ch :: [Int] -> [Int] -> (Qstate, Int, String) -> (Qstate, Int, String)
+ch c t (q, a, s) = do
   let mag = (1/(2**0.5))
   let m = [map (*mag) [1, 1], map (*mag) [1, (-1)]]
-  mcmt m
+  let (qt, at) = mcmt m c t (q, a)
+  (qt, at, (s ++ "ch " ++ (show c) ++ " " ++ (show t) ++ ", "))
 
-cg :: [[Complex Float]] -> [Int] -> [Int] -> (Qstate, Int) -> (Qstate, Int)
-cg m = mcmt m
+cg :: [[Complex Float]] -> [Int] -> [Int] -> (Qstate, Int, String) -> (Qstate, Int, String)
+cg m c t (q, a, s) = do
+  let (qt, at) = mcmt m c t (q, a)
+  (qt, at, (s ++ "cg " ++ (show m) ++ " " ++ (show c) ++ " " ++ (show t) ++ ", "))
 
 mcmt :: [[Complex Float]] -> [Int] -> [Int] -> (Qstate, Int) -> (Qstate, Int)
 mcmt m c [t] q = mcg m c [t] q
 mcmt m c (t:ts) q = mcg m c [t] (mcmt m c ts q)
 
-mcg :: [[Complex Float]] -> [Int] -> [Int] -> (Qstate, Int) -> (Qstate,Int)
-mcg g c t q = appGate (c++t) (genMat g (length c)) q
+mcg :: [[Complex Float]] -> [Int] -> [Int] -> (Qstate, Int) -> (Qstate, Int)
+mcg g c t (q, a) = do
+  let (qt, at, _) = appGate (c++t) (genMat g (length c)) "" (q, a, "")
+  (qt, at)
 
 genMat :: [[Complex Float]] -> Int -> [[Complex Float]]
 genMat m cn =  extMat (getControl (2^((cn+1)-1) - 1)) m ((2^(cn+1)) - 2) 1
@@ -167,13 +183,13 @@ padDown n m = map (++(take n (repeat (0 :+ 0)))) m
 padUp :: Int -> [[Complex Float]] -> [[Complex Float]]
 padUp n m = map ((take n (repeat (0 :+ 0)))++) m
 
-appGate :: [Int] -> [[Complex Float]] -> (Qstate, Int) -> (Qstate, Int)
-appGate n m ((Qstate q), qn) = do
+appGate :: [Int] -> [[Complex Float]] -> String -> (Qstate, Int, String) -> (Qstate, Int, String)
+appGate n m s ((Qstate q), qn, _) = do
   let l = generateGroups n qn
   let arr = map (\x -> map (q!!) x) l
   let oarr = map (\x -> v_mMult x m) arr
   let oq = reorder (unwrap l) (unwrap oarr)
-  ((Qstate oq), qn)
+  ((Qstate oq), qn, s)
 
 reorder :: [Int] -> [Complex Float] -> [Complex Float]
 reorder [n] [a] = appVal [] n a
@@ -235,8 +251,8 @@ unwrap :: [[a]] -> [a]
 unwrap [x] = x
 unwrap (x:xs) = x ++ (unwrap xs)
 
-state :: (Qc, Int) -> (Qstate, Int)
-state ((Qc q), n) = (Qstate (getState q), n)
+state :: (Qc, Int) -> (Qstate, Int, String)
+state ((Qc q), n) = (Qstate (getState q), n, "")
 
 getState :: [(Complex Float, Complex Float)] -> [Complex Float]
 getState [(a, b)] = a : [b]
